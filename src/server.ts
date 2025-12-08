@@ -6,6 +6,7 @@ const io = new Server(3001, {
     },
 });
 
+
 let players: any[] = []; //ts stores connected socket id
 
 io.on('connection', (socket) => {

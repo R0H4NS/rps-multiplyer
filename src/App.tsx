@@ -16,6 +16,7 @@ function getResult(p1: Choice, p2: Choice) {
     return "You lose... :(";
     }
 
+
     export default function App() {
         const [connectedPlayers, setConnectedPlayers] = useState(1);
 
