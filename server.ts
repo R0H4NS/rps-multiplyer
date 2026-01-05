@@ -2,8 +2,9 @@ import { Server } from "socket.io";
 
 type Choice = "rock" | "paper" | "scissors";
 
-const io = new Server(3002, {
-    cors: { origin: "http://localhost:5173" }
+const PORT = process.env.PORT || 3002
+
+const io = new Server(Number(PORT), {    cors: { origin: "http://localhost:5173" }
 });
 
 let players: string[] = [];
