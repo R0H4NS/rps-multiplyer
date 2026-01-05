@@ -15,21 +15,22 @@ export default function App() {
     const socketRef = useRef<Socket | null>(null);
 
     useEffect(() => {
-        const socket = io("http://localhost:3002");
+        const socket = io("http://localhost:3001");
         socketRef.current = socket;
 
-        socket.on("playerCount", setPlayers);
-
-        socket.on("gameResult", (data) => {
+        socket.on("connect", () => console.log("Connected. Socket ID: " + socket.id));
+        socket.on("playerCount", (count) => setPlayers(count));
+        socket.on("gameResult", (data: { yourChoice: Choice; opponentChoice: Choice; result: string }) => {
             setMyChoice(data.yourChoice);
             setOpponentChoice(data.opponentChoice);
             setResult(data.result);
-            setLocked(true); // locks answer choices after picked
         });
 
-        return () => socket.disconnect();
+        // Correct cleanup function
+        return () => {
+            socket.disconnect();
+        };
     }, []);
-
     function play(choice: Choice) {
         if (!socketRef.current || locked) return;
 

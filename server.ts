@@ -2,10 +2,13 @@ import { Server } from "socket.io";
 
 type Choice = "rock" | "paper" | "scissors";
 
-const PORT = process.env.PORT || 3002
-
-const io = new Server(Number(PORT), {    cors: { origin: "http://localhost:5173" }
+const PORT = process.env.PORT || 3001;
+const io = new Server(Number(PORT), {
+    cors: {
+        origin: "*",
+    },
 });
+
 
 let players: string[] = [];
 let moves: Record<string, Choice> = {};
