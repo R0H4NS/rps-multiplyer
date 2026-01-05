@@ -1,83 +1,92 @@
-import {useEffect, useRef, useState} from "react";
-import {io, Socket} from "socket.io-client";
+import { useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
+import "./App.css";
 
 type Choice = "rock" | "paper" | "scissors";
 const choices: Choice[] = ["rock", "paper", "scissors"];
 
-function getResult(p1: Choice, p2: Choice) {
-    if (p1 === p2)
-{
-    return "Tie!";
-}
-    if ((p1 === "rock" && p2 === "scissors") || (p1 === "paper" && p2 === "rock") || (p1 === "scissors" && p2 === "paper"))
-    {
-        return "You win! :)";
+export default function App() {
+    const [players, setPlayers] = useState(1);
+    const [myChoice, setMyChoice] = useState<Choice | null>(null);
+    const [opponentChoice, setOpponentChoice] = useState<Choice | null>(null);
+    const [result, setResult] = useState("");
+    const [locked, setLocked] = useState(false);
+
+    const socketRef = useRef<Socket | null>(null);
+
+    useEffect(() => {
+        const socket = io("http://localhost:3002");
+        socketRef.current = socket;
+
+        socket.on("playerCount", setPlayers);
+
+        socket.on("gameResult", (data) => {
+            setMyChoice(data.yourChoice);
+            setOpponentChoice(data.opponentChoice);
+            setResult(data.result);
+            setLocked(true); // locks answer choices after picked
+        });
+
+        return () => socket.disconnect();
+    }, []);
+
+    function play(choice: Choice) {
+        if (!socketRef.current || locked) return;
+
+        setMyChoice(choice);
+        setLocked(true);
+        socketRef.current.emit("move", choice);
     }
-    return "You lose... :(";
+
+    function nextRound() {
+        setMyChoice(null);
+        setOpponentChoice(null);
+        setResult("");
+        setLocked(false);
     }
 
+    if (players < 2) {
+        return <h1 className="waiting">Waiting for opponent...</h1>;
+    }
 
-    export default function App() {
-        const [connectedPlayers, setConnectedPlayers] = useState(1);
+    return (
+        <div className="container">
+            <h1>Rock Paper Scissors</h1>
 
-        const [myChoice, setMyChoice] = useState<Choice | null>(null);
-        const [opponentChoice, setOpponentChoice] = useState<Choice | null>(null);
-        const result = myChoice && opponentChoice ? getResult(myChoice, opponentChoice) : "";
-
-        const socketRef = useRef<Socket | null>(null);
-
-        useEffect(() => {
-            const sss = io("http://localhost:3001"); // Connects to multiplayer serverrrr
-            socketRef.current = sss;
-            sss.on("playerCount", (count) => {
-                setConnectedPlayers(count);
-            });
-
-            sss.on("opponentMove", (move: Choice) => {
-                setOpponentChoice(move);
-            });
-
-            return () => {
-                sss.disconnect();
-            };
-
-        }, []);
-
-        const sendChoice = (choice: Choice) => {
-            const socket = socketRef.current;
-            if (!socket) {
-                return;
-            }
-
-            setMyChoice(choice);
-            setOpponentChoice(null);
-
-            socket.emit("move", choice);
-        };
-
-
-        if (connectedPlayers < 2) {
-            return <h1 style={{textAlign: "center"}}>Waiting for opponent...</h1>;
-        }
-
-        return (
-            <div className="container">
-                <h1>Multiplayer Rock, Paper, Scissors</h1>
-
-                <div className="choices">
-                    {choices.map((choice) => (
-                        <button
-                            key={choice}
-                            onClick={() => sendChoice(choice)}
-                            className="choiceButton"
-                        >
-                            {choice.toUpperCase()}
-                        </button>
-                    ))}
-                </div>
-                {myChoice && <p>You picked: {myChoice}</p>}
-                {opponentChoice && <p>Opponent picked: {opponentChoice}</p>}
-                {result && <h2>{result}</h2>}
+            <div className="choices">
+                {choices.map(c => (
+                    <button
+                        key={c}
+                        disabled={locked}
+                        onClick={() => play(c)}
+                    >
+                        {c.toUpperCase()}
+                    </button>
+                ))}
             </div>
-        );
-    }
+
+            {myChoice && <p>You picked: {myChoice}</p>}
+            {opponentChoice && <p>Opponent picked: {opponentChoice}</p>}
+            {result && (
+                <h2
+                    className={`result ${
+                        result.includes("win")
+                            ? "win"
+                            : result.includes("lose")
+                                ? "lose"
+                                : "tie"
+                    }`}
+                >
+                    {result}
+                </h2>
+            )}
+
+
+            {result && (
+                <button className="next" onClick={nextRound}>
+                    Next Round
+                </button>
+            )}
+        </div>
+    );
+}
