@@ -56,7 +56,7 @@ button {
     color: white;
     box-shadow: 0 10px 20px rgba(0,0,0,0.6);
     transition: all 0.2s ease;
-    border-radius: 25px; /* round buttons now */
+    border-radius: 25px;
 }
 
 button:hover:enabled {
@@ -80,32 +80,28 @@ button:active:enabled {
 #result {
     font-size: 28px;
     margin-top: 25px;
-    opacity: 1; /* make visible by default */
+    opacity: 1;
     transition: all 0.3s;
 }
 
-/* Win = green */
 #result.win {
-    color: #10b981; /* green */
+    color: #10b981;
     text-shadow: 0 0 15px #10b981, 0 0 30px #34d399;
     animation: bounce 0.5s ease forwards;
 }
 
-/* Lose = red */
 #result.lose {
-    color: #ef4444; /* red */
+    color: #ef4444;
     text-shadow: 0 0 15px #ef4444, 0 0 30px #f87171;
     animation: shake 0.5s ease forwards;
 }
 
-/* Tie = yellow */
 #result.tie {
     color: #facc15;
     text-shadow: 0 0 15px #facc15, 0 0 30px #fbbf24;
     animation: fadeIn 0.5s forwards;
 }
 
-/* Keyframes */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -136,7 +132,7 @@ button:active:enabled {
     color: white;
     box-shadow: 0 10px 20px rgba(0,0,0,0.6);
     transition: all 0.3s ease;
-    border-radius: 25px; /* round button */
+    border-radius: 25px;
 }
 
 #next:hover {
