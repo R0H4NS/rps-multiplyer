@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rock Paper Scissors</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="app.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <div class="container">
+        <h1>Rock Paper Scissors</h1>
+
+        <h2 id="waiting">Waiting for opponent...</h2>
+
+        <div class="choices" id="choices" style="display:none;">
+            <button onclick="play('rock')" id="rockBtn">ROCK</button>
+            <button onclick="play('paper')" id="paperBtn">PAPER</button>
+            <button onclick="play('scissors')" id="scissorsBtn">SCISSORS</button>
+        </div>
+
+        <p id="myChoice"></p>
+        <p id="opponentChoice"></p>
+        <h2 id="result"></h2>
+
+        <button id="next" onclick="nextRound()" style="display:none;">
+            Next Round
+        </button>
+    </div>
+</div>
+
+<script>
+    const socket = io("http://localhost:3002");
+    let locked = false;
+
+    socket.on("playerCount", (count) => {
+        document.getElementById("waiting").style.display = "none";
+        document.getElementById("choices").style.display = "flex";
+    });
+
+    socket.on("gameResult", (data) => {
+        document.getElementById("myChoice").innerText =
+            "You picked: " + data.yourChoice;
+        document.getElementById("opponentChoice").innerText =
+            "Opponent picked: " + data.opponentChoice;
+
+        const resEl = document.getElementById("result");
+        resEl.innerText = data.result;
+
+        // Add class for color effects
+        resEl.className = "";
+        if (data.result.includes("win")) resEl.classList.add("win");
+        else if (data.result.includes("lose")) resEl.classList.add("lose");
+        else resEl.classList.add("tie");
+
+        document.getElementById("next").style.display = "inline-block";
+        locked = true;
+
+        document.getElementById("rockBtn").disabled = true;
+        document.getElementById("paperBtn").disabled = true;
+        document.getElementById("scissorsBtn").disabled = true;
+    });
+
+    function play(choice) {
+        if (locked) return;
+        socket.emit("move", choice);
+
+        locked = true;
+        document.getElementById("rockBtn").disabled = true;
+        document.getElementById("paperBtn").disabled = true;
+        document.getElementById("scissorsBtn").disabled = true;
+
+        document.getElementById("myChoice").innerText = "You picked: " + choice;
+    }
+
+    function nextRound() {
+        locked = false;
+        document.getElementById("myChoice").innerText = "";
+        document.getElementById("opponentChoice").innerText = "";
+        const resEl = document.getElementById("result");
+        resEl.innerText = "";
+        resEl.className = "";
+        document.getElementById("next").style.display = "none";
+
+        document.getElementById("rockBtn").disabled = false;
+        document.getElementById("paperBtn").disabled = false;
+        document.getElementById("scissorsBtn").disabled = false;
+    }
+</script>
+</body>
+</html>
