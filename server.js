@@ -13,7 +13,7 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3002;
 
-// Serve client
+// Serve static files from client folder
 app.use(express.static(path.join(__dirname, "client")));
 
 app.get("/", (req, res) => {
@@ -23,20 +23,22 @@ app.get("/", (req, res) => {
 let players = [];
 let moves = {};
 
+// Determine result
 function getResult(a, b) {
     if (a === b) return { text: "Tie!", type: "tie" };
     if (
         (a === "rock" && b === "scissors") ||
         (a === "paper" && b === "rock") ||
         (a === "scissors" && b === "paper")
-    ) {
+    )
         return { text: "You win!", type: "win" };
-    }
     return { text: "You lose!", type: "lose" };
 }
 
 io.on("connection", (socket) => {
+    // Only allow 2 players
     if (players.length >= 2) {
+        socket.emit("full", "Server full, try again later");
         socket.disconnect();
         return;
     }
@@ -45,9 +47,10 @@ io.on("connection", (socket) => {
     io.emit("playerCount", players.length);
 
     socket.on("move", (choice) => {
-        if (moves[socket.id]) return;
+        if (moves[socket.id]) return; // prevent double move
         moves[socket.id] = choice;
 
+        // Only process when 2 moves exist
         if (players.length === 2) {
             const [p1, p2] = players;
             if (moves[p1] && moves[p2]) {
@@ -66,13 +69,14 @@ io.on("connection", (socket) => {
                     ...r2,
                 });
 
+                // Reset moves for next round
                 moves = {};
             }
         }
     });
 
     socket.on("disconnect", () => {
-        players = players.filter(id => id !== socket.id);
+        players = players.filter((id) => id !== socket.id);
         delete moves[socket.id];
         io.emit("playerCount", players.length);
     });
