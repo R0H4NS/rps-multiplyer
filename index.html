@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rock Paper Scissors</title>
+    <link rel="stylesheet" href="/index.css">
+    <link rel="stylesheet" href="/App.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <div class="container">
+        <h1>Rock Paper Scissors</h1>
+        <h2 id="status" class="waiting">Waiting for opponent...</h2>
+
+        <div class="choices" id="choices" style="display:none;">
+            <button onclick="play('rock')" id="rockBtn">Rock</button>
+            <button onclick="play('paper')" id="paperBtn">Paper</button>
+            <button onclick="play('scissors')" id="scissorsBtn">Scissors</button>
+        </div>
+
+        <p id="me"></p>
+        <p id="them"></p>
+        <h2 id="result"></h2>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    let locked = false;
+
+    socket.on("playerCount", (count) => {
+        if (count < 2) {
+            document.getElementById("status").innerText = "Waiting for opponent...";
+            document.getElementById("choices").style.display = "none";
+        } else {
+            document.getElementById("status").innerText = "Game on!";
+            document.getElementById("choices").style.display = "flex";
+        }
+    });
+
+    socket.on("gameResult", (data) => {
+        document.getElementById("me").innerText = "You picked: " + data.yourChoice;
+        document.getElementById("them").innerText = "Opponent picked: " + data.opponentChoice;
+
+        const resEl = document.getElementById("result");
+        resEl.innerText = data.text;
+        resEl.className = "";
+        if (data.type === "win") resEl.classList.add("win");
+        else if (data.type === "lose") resEl.classList.add("lose");
+        else resEl.classList.add("tie");
+
+        locked = true;
+
+        ["rockBtn", "paperBtn", "scissorsBtn"].forEach(id => {
+            const btn = document.getElementById(id);
+            btn.disabled = true;
+            btn.classList.add("locked");
+        });
+
+        // Automatically reload after 5 seconds
+        setTimeout(() => {
+            location.reload();
+        }, 5000);
+    });
+
+    socket.on("full", (msg) => {
+        alert(msg);
+        document.getElementById("status").innerText = msg;
+        document.getElementById("choices").style.display = "none";
+    });
+
+    function play(choice) {
+        if (locked) return;
+        socket.emit("move", choice);
+        document.getElementById("me").innerText = "You picked: " + choice;
+        locked = true;
+
+        ["rockBtn", "paperBtn", "scissorsBtn"].forEach(id => {
+            const btn = document.getElementById(id);
+            btn.disabled = true;
+            btn.classList.add("locked");
+        });
+    }
+</script>
+</body>
+</html>

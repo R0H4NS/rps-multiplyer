@@ -17,12 +17,12 @@ body {
     width: 100%;
     display: flex;
     justify-content: center;
+    align-items: center;
 }
 
-/* ===== CONTAINER ===== */
 .container {
     background: rgba(0, 0, 0, 0.85);
-    padding: 60px 80px;
+    padding: 50px 70px;
     text-align: center;
     border-radius: 20px;
     box-shadow:
@@ -38,27 +38,25 @@ body {
             0 0 60px #3b82f6;
 }
 
-/* ===== HEADERS ===== */
 h1 {
     font-size: 48px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     text-shadow: 0 0 15px #3b82f6;
 }
 
-.waiting {
+h2.waiting {
     font-size: 24px;
     animation: pulse 1s infinite alternate;
+    margin: 20px 0;
 }
 
-/* ===== CHOICES ===== */
-.choices {
-    display: flex;
-    gap: 25px;
+#choices {
+    display: none;
+    flex-direction: row;
     justify-content: center;
-    margin: 30px 0;
+    gap: 10px;
 }
 
-/* ===== BUTTONS ===== */
 button {
     padding: 18px 36px;
     font-size: 20px;
@@ -82,16 +80,6 @@ button:active {
     transform: scale(0.95);
 }
 
-#next {
-    margin-top: 25px;
-    background: #10b981;
-}
-
-#next:hover {
-    background: #059669;
-}
-
-/* ===== RESULT ===== */
 #result {
     font-size: 28px;
     margin-top: 20px;
@@ -115,7 +103,6 @@ button:active {
     animation: fadeIn 0.4s ease;
 }
 
-/* ===== ANIMATIONS ===== */
 @keyframes pulse {
     from { opacity: 0.6; }
     to { opacity: 1; }

@@ -2,86 +2,111 @@ import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3002;
+app.use(express.static(path.resolve("")));
 
-// Serve static files from client folder
-app.use(express.static(path.join(__dirname, "client")));
+let waitingQueue = []; // queue for unmatched players
+let games = {}; // store active games: gameId -> {player1, player2, moves}
 
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "client/index.html"));
-});
-
-let players = [];
-let moves = {};
-
-// Determine result
-function getResult(a, b) {
-    if (a === b) return { text: "Tie!", type: "tie" };
-    if (
-        (a === "rock" && b === "scissors") ||
-        (a === "paper" && b === "rock") ||
-        (a === "scissors" && b === "paper")
-    )
-        return { text: "You win!", type: "win" };
-    return { text: "You lose!", type: "lose" };
-}
+const generateGameId = () => Math.random().toString(36).substring(2, 10);
 
 io.on("connection", (socket) => {
-    // Only allow 2 players
-    if (players.length >= 2) {
-        socket.emit("full", "Server full, try again later");
-        socket.disconnect();
-        return;
+    console.log("User connected:", socket.id);
+
+    // Add to queue
+    waitingQueue.push(socket);
+
+    // Check if we can start a game
+    if (waitingQueue.length >= 2) {
+        const player1 = waitingQueue.shift();
+        const player2 = waitingQueue.shift();
+        const gameId = generateGameId();
+
+        games[gameId] = {
+            player1: player1.id,
+            player2: player2.id,
+            moves: {}
+        };
+
+        // Notify both clients the game is ready
+        [player1, player2].forEach((player) => {
+            player.emit("playerCount", 2);
+            player.gameId = gameId; // attach gameId to socket
+        });
+    } else {
+        socket.emit("playerCount", 1);
     }
 
-    players.push(socket.id);
-    io.emit("playerCount", players.length);
-
     socket.on("move", (choice) => {
-        if (moves[socket.id]) return; // prevent double move
-        moves[socket.id] = choice;
+        const game = games[socket.gameId];
+        if (!game) return;
 
-        // Only process when 2 moves exist
-        if (players.length === 2) {
-            const [p1, p2] = players;
-            if (moves[p1] && moves[p2]) {
-                const r1 = getResult(moves[p1], moves[p2]);
-                const r2 = getResult(moves[p2], moves[p1]);
+        // Record move if not already locked
+        if (!game.moves[socket.id]) {
+            game.moves[socket.id] = choice;
 
-                io.to(p1).emit("gameResult", {
-                    yourChoice: moves[p1],
-                    opponentChoice: moves[p2],
-                    ...r1,
+            // If both players made a move, determine result
+            if (Object.keys(game.moves).length === 2) {
+                const p1Choice = game.moves[game.player1];
+                const p2Choice = game.moves[game.player2];
+
+                const determineResult = (mine, theirs) => {
+                    if (mine === theirs) return "tie";
+                    if (
+                        (mine === "rock" && theirs === "scissors") ||
+                        (mine === "paper" && theirs === "rock") ||
+                        (mine === "scissors" && theirs === "paper")
+                    ) return "win";
+                    return "lose";
+                };
+
+                // Send results to both
+                io.to(game.player1).emit("gameResult", {
+                    yourChoice: p1Choice,
+                    opponentChoice: p2Choice,
+                    text: determineResult(p1Choice, p2Choice) === "win" ? "You Win!" :
+                        determineResult(p1Choice, p2Choice) === "lose" ? "You Lose!" : "Tie!",
+                    type: determineResult(p1Choice, p2Choice)
                 });
 
-                io.to(p2).emit("gameResult", {
-                    yourChoice: moves[p2],
-                    opponentChoice: moves[p1],
-                    ...r2,
+                io.to(game.player2).emit("gameResult", {
+                    yourChoice: p2Choice,
+                    opponentChoice: p1Choice,
+                    text: determineResult(p2Choice, p1Choice) === "win" ? "You Win!" :
+                        determineResult(p2Choice, p1Choice) === "lose" ? "You Lose!" : "Tie!",
+                    type: determineResult(p2Choice, p1Choice)
                 });
 
-                // Reset moves for next round
-                moves = {};
+                // Delete the game after best-of-1
+                delete games[socket.gameId];
             }
         }
     });
 
     socket.on("disconnect", () => {
-        players = players.filter((id) => id !== socket.id);
-        delete moves[socket.id];
-        io.emit("playerCount", players.length);
+        console.log("User disconnected:", socket.id);
+
+        // Remove from queue if waiting
+        waitingQueue = waitingQueue.filter(s => s.id !== socket.id);
+
+        // Notify opponent if in active game
+        if (socket.gameId && games[socket.gameId]) {
+            const game = games[socket.gameId];
+            const opponentId = game.player1 === socket.id ? game.player2 : game.player1;
+            io.to(opponentId).emit("full", "Opponent disconnected.");
+            delete games[socket.gameId];
+        }
     });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+app.get("/", (req, res) => {
+    res.sendFile(path.resolve("./index.html"));
+});
+
+server.listen(3000, () => {
+    console.log("Server started on port 3000");
 });
